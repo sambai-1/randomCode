@@ -1,8 +1,8 @@
 class Player:
-    def __init__(self, firstName = "", lastName = "", chips = ""):
+    def __init__(self, firstName = "", lastName = "", chips = "0"):
         self.firstName = firstName
         self.lastName = lastName
-        self.chips = chips
+        self.chips = int(chips)
     
     def getName(self, screenSize = 8):
         name_length = len(self.firstName) + len(self.lastName) + 1
@@ -18,11 +18,16 @@ class Player:
                 else:
                     return self.firstName[:screenSize - 5] + ". " + self.lastName[0] + ". "
     
-    def addChips(self, input):
-        if len(input) == 1:
-            input = input[0]
-            if input.isdigit():
-                self.chips += int(input)
+    def getChips(self):
+        return self.chips
+
+    def addChips(self):
+        howMuch = input("chips: ").strip().lower().split(" ")
+        if len(howMuch) == 1:
+            howMuch = howMuch[0]
+            if howMuch.isdigit():
+                self.chips += int(howMuch)
+                print(howMuch + " chips added")
                 return True
             print("not a number")
             return False

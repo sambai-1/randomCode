@@ -15,28 +15,30 @@ def whichGame():
         else:
             print("Unknown option.")
 
+def startRound(numPlayers):
+    
+
 def startCalculator():
+    numPlayers = -1
     while True:
-        choice = input("(A)dd Player, (F)und Player, (S)tart Round, (Q)uit: ").strip().lower().split(" ")
-        if choice[0] in ('a', 'add'):
-            addPlayer = input("chips, firstName, lastName (optional): ").strip().lower().split(" ")
-            if (len(addPlayer) == 3):
-                players.append(Player(firstName=addPlayer[1], lastName=addPlayer[2], chips=addPlayer[0])) 
-            elif (len(addPlayer) == 2):
-                players.append(Player(firstName=addPlayer[1], chips=addPlayer[0])) 
+        choice = input("(S)tart Round, (N)um Players, (Q)uit: ").strip().lower().split(" ")
+        if choice[0] in ('s', 'start'):
+            if numPlayers == -1:
+                print("run Num Players first")
             else:
-                print("Unknown option.")
-        elif choice[0] in ('f', 'fund'):
-            addPlayer = input("first ").strip().lower().split(" ")
-            if (len(addPlayer) == 3):
-                players.append(Player(firstName=addPlayer[1], lastName=addPlayer[2], chips=addPlayer[0])) 
-            elif (len(addPlayer) == 2):
-                players.append(Player(firstName=addPlayer[1], chips=addPlayer[0])) 
-            else:
-                print("Unknown option.")
-        elif choice[0] in ('s', 'start'):
-            print("Bye")
-            break
+                startRound(numPlayers)
+        elif choice[0] in ('n', 'num'):
+            while True:
+                howMany = input("Number of Players: ").strip().lower().split(" ")
+                if len(howMany == 1):
+                    howMany = howMany[0]
+                    if 0 < howMany:
+                        numPlayers = howMany
+                        break
+                    else:
+                        print("invalid input")
+                else:
+                    print("invalid input")
         elif choice[0] in ('q', 'quit'):
             print("Bye")
             break
@@ -56,15 +58,17 @@ def startGame():
                 print("Unknown option.")
         elif choice[0] in ('f', 'fund'):
             index = selectPlayers(players, singular=True)
-            print(index)
+            player = players[index]
+            successful = False
+            while not successful:
+                successful = player.addChips()
 
         elif choice[0] in ('p', 'player'):
-            index = selectPlayers(players, singular=False)
-            print(index)
+            for i, player in enumerate(players):
+                print("Player " + str(i) + ": " + player.getName(10) + " chips: " + str(player.getChips()))
                     
         elif choice[0] in ('s', 'start'):
-            print("Bye")
-            break
+            startRound(len(players))
         elif choice[0] in ('q', 'quit'):
             print("Bye")
             break
