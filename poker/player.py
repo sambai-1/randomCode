@@ -18,5 +18,17 @@ class Player:
                 else:
                     return self.firstName[:screenSize - 5] + ". " + self.lastName[0] + ". "
     
+    def addChips(self, input):
+        if len(input) == 1:
+            input = input[0]
+            if input.isdigit():
+                self.chips += int(input)
+                return True
+            print("not a number")
+            return False
+        else:
+            return False
+
+    
     
         
