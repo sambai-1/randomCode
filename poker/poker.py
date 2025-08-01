@@ -15,7 +15,9 @@ def whichGame():
         else:
             print("Unknown option.")
 
-def startRound(numPlayers):
+def startRound(numPlayers, players, playerMode = False):
+    if playerMode:
+
     
 
 def startCalculator():
@@ -47,7 +49,7 @@ def startCalculator():
 
 def startGame():
     while True:
-        choice = input("(A)dd Player, (F)und Player, (P)layer Info, (S)tart Round, (Q)uit: ").strip().lower().split(" ")
+        choice = input("(A)dd Player, (F)und Player, (P)layer Info, (B)linds, (S)tart Round, (Q)uit: ").strip().lower().split(" ")
         if choice[0] in ('a', 'add'):
             addPlayer = input("chips, firstName, lastName (optional): ").strip().lower().split(" ")
             if (len(addPlayer) == 3):
@@ -56,6 +58,7 @@ def startGame():
                 players.append(Player(firstName=addPlayer[1], chips=addPlayer[0])) 
             else:
                 print("Unknown option.")
+                
         elif choice[0] in ('f', 'fund'):
             index = selectPlayers(players, singular=True)
             player = players[index]
@@ -66,14 +69,22 @@ def startGame():
         elif choice[0] in ('p', 'player'):
             for i, player in enumerate(players):
                 print("Player " + str(i) + ": " + player.getName(10) + " chips: " + str(player.getChips()))
+
+        elif choice[0] in ('b', 'blinds'):
+            print("Small Blind: " + str(smallBlind) + ", Big Blind: " + str(bigBlind))
+            successful = False
+            while not successful:
+                addPlayer = input("").strip().lower().split(" ")
                     
         elif choice[0] in ('s', 'start'):
-            startRound(len(players))
+            startRound(len(players), players, True)
         elif choice[0] in ('q', 'quit'):
             print("Bye")
             break
         else:
             print("Unknown option.")
 
+smallBlind = -1
+bigBlind = -1
 players = []
 whichGame()
