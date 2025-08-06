@@ -1,0 +1,15 @@
+.home {
+  width: fit-content;   /* shrink‐wrap to its widest row */
+  margin: 0 auto;
+}
+
+.home .row {
+  /* make each row a flex‐line, left-aligned */
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 0rem;
+}
+
+.home .row:last-child {
+  margin-bottom: 0;
+}

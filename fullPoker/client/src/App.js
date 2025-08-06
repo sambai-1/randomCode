@@ -1,23 +1,19 @@
 import React, {useState, useEffect} from "react"
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Layout from "./Layout";
+import Home from "./Home";
+import WaitRoom from "./WaitRoom";
 
-function App() {
-    /*
-    const [data, setData] = useState([{}])
-
-    useEffect(() => {
-        fetch("/members").then(
-            res => res.json()
-        ).then(
-            data => {
-                setData(data)
-                console.log(data)
-            }
-        )
-    }, []) */
-    return (
-        <div>
-        </div>
-    )
+function App(){
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Home />} />
+          <Route path="waiting-room/:numPlayers" element={<WaitRoom />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
 }
-
-export default App
+export default App;
