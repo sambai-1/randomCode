@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, request
 import os
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timezone
@@ -15,11 +15,37 @@ class Player(db.Model):
 
   def __repr__(self):
     return '<User %r>' % self.name
+  
+  def to_diction(self):
+    return {
+      "id": self.id,
+      "name": self.name,
+      "chips": self.chips
+    }
 
-# Serve React build for any other route
-@app.route("/")
-def index():
-  return
+@app.route("/api/createPlayer", methods=['POST', 'GET'])
+def createPlayer():
+  # should only ever be post. get and post are just for learning
+  if request.method == 'POST':
+    data = request.get_json() or {}
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify(success=False, error="No name provided"), 400
+    newPlayer = Player(name=name)
+    db.session.add(newPlayer)
+    db.session.commit()
+
+    return jsonify(success=True)
+  else:
+    pass
+
+@app.route("/ap/getPlayers", methods=['POST', 'GET'])
+def getPlayers():
+  if request.method == 'POST':
+    pass
+  else:
+    players = Player.query.order_by(Player.name).all()
+    return jsonify([player.to_diction() for player in players])
 
 if __name__=="__main__":
   app.run(debug=True)
