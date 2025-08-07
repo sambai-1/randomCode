@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./Layout";
 import Home from "./Home";
 import WaitRoom from "./WaitRoom";
+import PlayerDirectory from "./PlayerDirectory";
+import PlayerCreate from "./PlayerCreate";
 
 function App(){
   return (
@@ -11,6 +13,8 @@ function App(){
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="waiting-room/:numPlayers" element={<WaitRoom />} />
+          <Route path="player-create" element={<PlayerCreate />} />
+          <Route path="player-directory" element={<PlayerDirectory />} />
         </Route>
       </Routes>
     </BrowserRouter>

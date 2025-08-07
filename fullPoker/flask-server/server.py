@@ -1,26 +1,25 @@
 from flask import Flask, request, jsonify, send_from_directory
 import os
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime, timezone
 
-app = Flask(
-  __name__,
-  static_folder="../frontend/build",
-  static_url_path="/"
-)
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///poker.db'
+db = SQLAlchemy(app)
 
-# Simple echo API
-@app.route("/api/echo", methods=["POST"])
-def echo():
-  data = request.get_json() or {}
-  return jsonify(text=data.get("text",""))
+class Player(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  name = db.Column(db.String(200), nullable = False)
+  chips = db.Column(db.Integer, default=0, nullable=False)
+  date_created = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+
+  def __repr__(self):
+    return '<User %r>' % self.name
 
 # Serve React build for any other route
-@app.route("/", defaults={"path": ""})
-@app.route("/<path:path>")
-def serve(path):
-  full = os.path.join(app.static_folder, path)
-  if path and os.path.exists(full):
-      return send_from_directory(app.static_folder, path)
-  return send_from_directory(app.static_folder, "index.html")
+@app.route("/")
+def index():
+  return
 
 if __name__=="__main__":
   app.run(debug=True)

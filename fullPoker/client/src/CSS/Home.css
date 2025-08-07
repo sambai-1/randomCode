@@ -7,9 +7,33 @@
   /* make each row a flex‐line, left-aligned */
   display: flex;
   justify-content: flex-start;
-  margin-bottom: 0rem;
+  margin-bottom: 1rem;
 }
 
 .home .row:last-child {
   margin-bottom: 0;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 0;
+}
+
+table, td, th {
+    border: 1px solid #aaa;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th {
+    height: 30px;
+}
+
+td {
+    text-align: center;
+    padding: 5px;
 }
