@@ -16,7 +16,7 @@ class Player(db.Model):
   def __repr__(self):
     return '<User %r>' % self.name
   
-  def to_diction(self):
+  def to_dict(self):
     return {
       "id": self.id,
       "name": self.name,
@@ -25,27 +25,37 @@ class Player(db.Model):
 
 @app.route("/api/createPlayer", methods=['POST', 'GET'])
 def createPlayer():
-  # should only ever be post. get and post are just for learning
   if request.method == 'POST':
     data = request.get_json() or {}
     name = data.get('name', '').strip()
     if not name:
-        return jsonify(success=False, error="No name provided"), 400
+        return jsonify(success=False, error="no name"), 400
+    
+    existing = Player.query.filter_by(name=name).first()
+    if existing:
+        return jsonify(success=False, error="user exists"), 200
+    
     newPlayer = Player(name=name)
     db.session.add(newPlayer)
     db.session.commit()
 
     return jsonify(success=True)
+  
   else:
     pass
 
-@app.route("/ap/getPlayers", methods=['POST', 'GET'])
+@app.route("/api/getPlayers", methods=['POST', 'GET'])
 def getPlayers():
   if request.method == 'POST':
     pass
   else:
     players = Player.query.order_by(Player.name).all()
-    return jsonify([player.to_diction() for player in players])
+    return jsonify([player.to_dict() for player in players])
+  
+@app.route("/api/countPlayers", methods=['GET'])
+def countPlayers():
+  total = Player.query.count()
+  return jsonify({"totalPlayers": total})
 
 if __name__=="__main__":
   app.run(debug=True)

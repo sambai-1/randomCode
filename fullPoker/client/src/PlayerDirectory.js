@@ -8,10 +8,15 @@ export default function Home(){
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch("/api/getPlayers")
-      .then(res => res.json())
-      .then(setPlayers)
-      .catch(console.error);
+    const fetchPlayers = async() => {
+      const res = await fetch('/api/getPlayers');
+      const data = await res.json();
+      if (data) {
+        setPlayers(data);
+      }
+    };
+
+    fetchPlayers();
   }, []);
 
   const goBack = async event => {
@@ -22,21 +27,24 @@ export default function Home(){
   return (
     <div className="home">
       <h1 className="Title">Players</h1>
-      <table>
+      <table className="borderTable">
         <tr>
-          <th className="name">Name</th>
-          <th className="chips">Chips</th>
-          <th className="actions">Actions</th>
+          <th className="name borderTable">Name</th>
+          <th className="chips borderTable">Chips</th>
+          <th className="actions borderTable">Actions</th>
         </tr>
-```````` # some sort of for loop wanted
-            <tr key={player.id}>
-              <td className="name">{player.name}</td>
-              <td className="chips">{player.chips}</td>
-              <td className="actions">
-                <Link to={``}>History</Link><br/>
-                <Link to={``}>Edit</Link>
+        <tbody>
+          {players.map(p => (
+            <tr key={p.id}>
+              <td className="borderTable centerText">{p.name}</td>
+              <td className="borderTable centerText">{p.chips}</td>
+              <td className="borderTable centerText">
+                <Link to={`/players/${p.id}/history`}>History</Link><br/>
+                <Link to={`/players/${p.id}/edit`}>Edit</Link>
               </td>
             </tr>
+          ))}
+        </tbody>
 
       </table>
       <div className="row">

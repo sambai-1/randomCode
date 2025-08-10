@@ -1,0 +1,6 @@
+.lobby {
+  width: fit-content;   /* shrink-wrap to content */
+  max-width: 100%;  
+  margin: 0px auto; 
+  border-collapse: collapse;
+}

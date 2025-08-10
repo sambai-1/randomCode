@@ -4,6 +4,7 @@ import './CSS/Home.css';
 
 export default function Home(){
   const [name, setName] = useState("");
+  const [message, setMessage] = useState("");
   const navigate = useNavigate();
 
   const goBack = async event => {
@@ -18,22 +19,22 @@ export default function Home(){
     try {
       const nameSent = await fetch("/api/createPlayer", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: {"Content-Type": "application/json"},
         body: JSON.stringify({ name })
       });
 
-      if (!nameSent.ok) throw new Error(`Server error: ${nameSent.status}`);
       const body = await nameSent.json();
+
       if (body.success) {
+        setMessage("Added " + name); 
         setName("");
-        navigate("/");
+      } else if (body.error === "user exists") {
+        setMessage("User already exists");
       } else {
-        console.error("Add failed:", body.error);
+        console.error("Add failed: ", body.error);
       }
     } catch (err) {
-      console.error("Error adding player:", err);
+      console.error("error occored: ", err);
     }
   };
 
@@ -44,6 +45,7 @@ export default function Home(){
             Create Player
           </h2>
         </div>
+        
         <div className="row">
           <input
             type="text"
@@ -53,6 +55,13 @@ export default function Home(){
           />
           <button type="submit">Add</button>
         </div>
+
+        {message && (
+          <div className="row">
+            <h2 className="message">{message}</h2>
+          </div>
+        )}
+        
       <div className="row">
         <button onClick={goBack}>Go Back</button>
       </div>
