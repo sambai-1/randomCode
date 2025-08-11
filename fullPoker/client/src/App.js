@@ -5,6 +5,7 @@ import Home from "./Home";
 import WaitRoom from "./WaitRoom";
 import PlayerDirectory from "./PlayerDirectory";
 import PlayerCreate from "./PlayerCreate";
+import Gaming from "./Gaming"
 
 function App(){
   return (
@@ -15,6 +16,7 @@ function App(){
           <Route path="waiting-room/:numPlayers" element={<WaitRoom />} />
           <Route path="player-create" element={<PlayerCreate />} />
           <Route path="player-directory" element={<PlayerDirectory />} />
+          <Route path="in-game" element={<Gaming />} />
         </Route>
       </Routes>
     </BrowserRouter>
