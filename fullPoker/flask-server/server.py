@@ -5,7 +5,13 @@ from sqlalchemy.dialects.sqlite import JSON
 from datetime import datetime, timezone
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///poker.db'
+
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+#DB_PATH = os.path.join(BASE_DIR, "instance", "poker.db")
+DB_PATH = os.path.join(BASE_DIR, "poker.db")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{DB_PATH}"
+## app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///poker.db'
 db = SQLAlchemy(app)
 
 class Player(db.Model):
@@ -26,7 +32,7 @@ class Player(db.Model):
     }
   
 class myDict(db.Model):
-  #__tablename__ = "myDict" 
+  __tablename__ = "myDict" 
   key = db.Column(db.String(200), primary_key = True)
   valueInt = db.Column(db.Integer, default=0, nullable=False)
   valueJSON = db.Column(JSON, default=list, nullable=False)
@@ -38,29 +44,33 @@ class myDict(db.Model):
       "valueJSON": self.valueJSON
     }
 
-def getInt(key):
-    row = myDict.query.get(key)
+  @classmethod
+  def getInt(cls, key):
+    row = cls.query.get(key)
     return row.valueInt if row else None
 
-def putInt(key, val):
-    row = myDict.query.get(key)
+  @classmethod
+  def putInt(cls, key, val):
+    row = cls.query.get(key)
     if row:
         row.valueInt = val
     else:
-        row = myDict(key=key, valueInt=val)
+        row = cls(key=key, valueInt=val)
         db.session.add(row)
     db.session.commit()
 
-def getJSON(key):
-    row = myDict.query.get(key)
+  @classmethod
+  def getJSON(cls, key):
+    row = cls.query.get(key)
     return row.valueJSON if row else None
 
-def putJSON(key, val):
-    row = myDict.query.get(key)
+  @classmethod
+  def putJSON(cls, key, val):
+    row = cls.query.get(key)
     if row:
         row.valueJSON = val
     else:
-        row = myDict(key=key, valueJSON=val)
+        row = cls(key=key, valueJSON=val)
         db.session.add(row)
     db.session.commit()
 
@@ -92,30 +102,53 @@ def createGame():
     buyIn = data["buyIn"]
     smallBlind = data["smallBlind"]
     bigBlind = data["bigBlind"]
-    players = data["players"]
+    players = data["toPlay"]
+
+    # app.logger.info("testing players list: %r", players)
+    # return jsonify(success=False, error=f"Unknown player id"), 404
+    # ok so players is currently a list of Nones
+
 
     myDict.putInt("smallBlind", smallBlind)
     myDict.putInt("buyIn", buyIn)
     myDict.putInt("bigBlind", bigBlind)
     myDict.putJSON("players", players)
 
-    # should remember here to impliment changing balance
+    for i in players:
+      player = Player.query.get(i)
 
+      if player is None:
+        app.logger.error("No Player with id=%r", i)
+        return jsonify(success=False, error=f"Unknown player id {i}"), 404
+      
+      player.chips = player.chips - buyIn
+    
+    db.session.commit()
     return jsonify(success=True)
 
   else:
+    playerNames = {}
+    # app.logger.info("testinggetJson %r", myDict.getJSON("players"))
+    for i in myDict.getJSON("players"):
+       playerNames[Player.query.get(i).name] = i
+    
+    # app.logger.info("player2ID dict %r", playerNames)
+
     dict = {
-      "buyIn": getInt("buyIn"), 
-      "smallBlind": getInt("smallBlind"),
-      "bigBlind": getInt("bigBlind"),
-      "players": getJSON("players")
+      "buyIn": myDict.getInt("buyIn"), 
+      "smallBlind": myDict.getInt("smallBlind"),
+      "bigBlind": myDict.getInt("bigBlind"),
+      "players2ID": playerNames
     }
-    return dict
+
+    app.logger.info("dict %r", dict)
+    return jsonify(dict)
 
 @app.route("/api/getPlayerIdDict", methods=['GET'])
 def getPlayerIdDict():
-  items = myDict.query.all()
+  items = Player.query.all()
   dict = {item.name: item.id for item in items}
+  # app.logger.error("current Dictionary is %r", dict)
   return jsonify(dict)
 
 @app.route("/api/getPlayers", methods=['POST', 'GET'])
@@ -132,9 +165,9 @@ def getGameDefaults():
   #dictList = [item.to_dict() for item in dictItems]
   #dict = {item['key'], item.['valueInt'] for item in dictList}
   dict = {
-    "buyIn": getInt("buyIn"), 
-    "smallBlind": getInt("smallBlind"),
-    "bigBlind": getInt("bigBlind"),
+    "buyIn": myDict.getInt("buyIn"), 
+    "smallBlind": myDict.getInt("smallBlind"),
+    "bigBlind": myDict.getInt("bigBlind"),
   }
   return dict
   

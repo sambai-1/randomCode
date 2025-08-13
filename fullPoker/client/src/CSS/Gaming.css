@@ -1,0 +1,22 @@
+.name {
+  padding: 0 40px;
+  height: 30px;
+}
+
+.chips {
+  padding: 0 60px;
+}
+
+.actions {
+  padding: 0 30px;
+}
+
+.centerText {
+  text-align: center;
+  padding: 5px;
+}
+
+.borderTable {
+  border: 1px solid #aaa; 
+  border-collapse: collapse;
+}

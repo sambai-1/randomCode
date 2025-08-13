@@ -38,6 +38,7 @@ export default function WaitRoom(){
         setMessage("set")
       } else {
         // BROO WHY IS THIS NOT WORKING???? TS PMO
+        // jk it worked
         setMessage("error")
       }
     };
@@ -102,26 +103,38 @@ export default function WaitRoom(){
   const trySubmit = async event => {
     event.preventDefault();
     let toPlay = [];
+
     for (const row of rows) {
-      console.log(row.locked)
+      //console.log(row.locked)
       if (row.locked == false) {
         setMessage("not everyone set")
         return
       } else {
+        //console.log(row.player)
+        //console.log(player2Id[row.player])
         toPlay.push(player2Id[row.player])
+        //console.log("toPlay:", toPlay); 
       }
     }
+
+
     const big = Number(bigBlind)
     const small = Number(smallBlind)
     const buy = Number(buyIn)
     let toSend = {}
     if (big > small && small >= 0 && buy >= big) {
+      // the source of my error is toPlay is (3) [1, 2, 3] for example
+      // however, this next step creates {"toPlay" : Array(3), instead of "toPlay" : [1, 2, 3]}
+      // console.log("toPlay value:", toPlay);
+      // console.log("payload:", JSON.stringify({ toPlay })); 
       toSend = { "buyIn": buy, "bigBlind": big, "smallBlind": small, "toPlay": toPlay}
+      // console.log("thingies", toSend["toPlay"])
     } else {
       setMessage("must buy in > big blind > small blind >= 0")
       return
     }
     
+    console.log(toSend)
     try {
       const createGame = await fetch("/api/createGame", {
         method: "POST",
@@ -134,11 +147,13 @@ export default function WaitRoom(){
       if (!body.success){
         console.error("Create failed: ", body.error);
       }
+      else {
+        navigate('/in-game')  
+      }
     } catch (err) {
       console.error("error occored: ", err);
     }
 
-    navigate('/in-game')
   }
 
   return (
