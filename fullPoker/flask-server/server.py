@@ -95,6 +95,25 @@ def createPlayer():
   else:
     pass
 
+@app.route("/api/buyIn", methods=['POST'])
+def buyIn():
+  data = request.get_json() or {}
+  try:
+    playerID = int(data.get("playerID"))
+    amount = int(data.get("buyIn"))
+  except (TypeError, ValueError):
+    return jsonify(success=False, error="invalid input")
+  
+  player = Player.query.get(playerID)
+  if player is None:
+    return jsonify(success=False, error="no Player found")
+  
+  player.chips = player.chips - amount
+
+  app.logger.info("Player %r new chip count: %r", player.name, player.chips)
+  db.session.commit()
+  return jsonify(success=True)
+
 @app.route("/api/createGame", methods=['POST', 'GET'])
 def createGame():
   if request.method == 'POST':
@@ -113,15 +132,6 @@ def createGame():
     myDict.putInt("buyIn", buyIn)
     myDict.putInt("bigBlind", bigBlind)
     myDict.putJSON("players", players)
-
-    for i in players:
-      player = Player.query.get(i)
-
-      if player is None:
-        app.logger.error("No Player with id=%r", i)
-        return jsonify(success=False, error=f"Unknown player id {i}"), 404
-      
-      player.chips = player.chips - buyIn
     
     db.session.commit()
     return jsonify(success=True)
@@ -141,7 +151,7 @@ def createGame():
       "players2ID": playerNames
     }
 
-    app.logger.info("dict %r", dict)
+    # app.logger.info("dict %r", dict)
     return jsonify(dict)
 
 @app.route("/api/getPlayerIdDict", methods=['GET'])

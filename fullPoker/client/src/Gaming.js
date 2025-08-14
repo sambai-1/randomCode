@@ -9,14 +9,33 @@ export default function Home(){
   const [smallBlind, setSmallBlind] = useState("");
   const [bigBlind, setBigBlind] = useState("");
   const navigate = useNavigate();
-  let players2ID = {};
 
-  let totalPlayers = 0;
-  let SB = 0;
-  let BB = 1;
-  let action = (BB + 1) % totalPlayers;
+  const [players2ID, setP2ID] = useState({});
+  const [totalPlayers, setTotalPlayers] = useState(0);
+  const [SB, setSB] = useState(0);
+  const [BB, setBB] = useState(1);
   const [rows, setRows] = useState([]);
 
+
+  const playerBuy = async (name, amount = buyIn) => {
+    console.log("buyIn player %r", name)
+    const payload = { "playerID": players2ID[name], "buyIn": amount }
+    try {
+      const buyBack = await fetch("/api/buyIn", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+      });
+
+      const body = await buyBack.json();
+
+      if (!body.success){
+        console.error("Create failed: ", body.error);
+      }
+    } catch (err) {
+      console.error("error occored: ", err);
+    }
+  }
 
   useEffect(() => {
     const fetchGame = async() => {
@@ -25,25 +44,30 @@ export default function Home(){
       });
       const data = await res.json();
       if (data) {
-        players2ID = data["players2ID"];
+        setP2ID(data["players2ID"]);
         const tmp = players2ID;
         // console.log("players2ID", players2ID)
         setBuyIn(data["buyIn"]);
         setBigBlind(data["bigBlind"]);
         setSmallBlind(data["smallBlind"]);
         setPlayers(Object.keys(tmp));
-
-        totalPlayers = players2ID.length;
+        setTotalPlayers(players.length);
       }
     };
 
     fetchGame();
   }, []);
 
-  useEffect(() => {
-    setRows(Array.from({ length: totalPlayers }, () => ({ player: "", locked: false , message: "" })));
-  }, [totalPlayers]);
 
+  useEffect(() => {
+    if (totalPlayers == 0) return;
+  
+    setRows(players.map(name => ({ "name": name, "chips": buyIn, "preFlop": 0, "flop": 0, "turn": 0, "river": 0, "message": "" })));
+
+    for (let name of players) {
+      playerBuy(name);
+    }
+  }, [players, buyIn, playerBuy]);
 
   const goBack = async event => {
     event.preventDefault();
@@ -54,30 +78,52 @@ export default function Home(){
 
 // for saving, create database, col 1 (main) date time, and col 2 is json of moves
 
+
+  const rounds = ["preFlop", "flop", "turn", "river"]
+  const [roundI, setRoundI] = useState(0);
+  const nextRound = () => {
+    if (roundI < 3) {
+      setRoundI(prevI => (prevI + 1) % rounds.length)
+    }
+  }
+  const isCurrentRound = (roundName) => {
+    return roundName == rounds[roundI]
+  }
+
   return (
     <div className="home">
       <h1 className="Title">Players</h1>
+      <button onClick={nextRound}>Next round</button>
       <table className="borderTable">
-        <tr>
-          <th className="name borderTable">Name</th>
-          <th className="chips borderTable">Chips</th>
-
-          <th className="actions borderTable">PreFlop</th>
-          <th className="actions borderTable">Flop</th>
-          <th className="actions borderTable">Turn</th>
-          <th className="actions borderTable">River</th>
-          <th className="actions borderTable">Actions</th>
-        </tr>
+        {/* <colgroup>
+          <col className="name" />
+          <col className="chips" />
+          <col className={`${isCurrentRound("preFlop") ? "chips" : "ignoreCol"}`} />
+          <col className={`${isCurrentRound("Flop") ? "chips" : "ignoreCol"}`} />
+          <col className={`${isCurrentRound("Turn") ? "chips" : "ignoreCol"}`} />
+          <col className={`${isCurrentRound("River") ? "chips" : "ignoreCol"}`} />
+          <col className="actions"/>
+        </colgroup> */}
+      
+        <thead>
+          <tr>
+            <th className="name borderTable">Name</th>
+            <th className="chips borderTable">Chips</th>
+            <th className={`borderTable ${isCurrentRound("preFlop") ? "chips" : "ignoredHead"}`}>PreFlop</th>
+            <th className={`borderTable ${isCurrentRound("flop") ? "chips" : "ignoredHead"}`}>Flop</th>
+            <th className={`borderTable ${isCurrentRound("turn") ? "chips" : "ignoredHead"}`}>Turn</th>
+            <th className={`borderTable ${isCurrentRound("river") ? "chips" : "ignoredHead"}`}>River</th>
+            <th className="hidden">Hidden</th>
+          </tr>
+        </thead>
 
         <tbody>
-          {players.map(p => (
-            <tr key={p.id}>
-              <td className="borderTable centerText">{p.name}</td>
-              <td className="borderTable centerText">{p.chips}</td>
-              <td className="borderTable centerText">
-                <Link to={`/players/${p.id}/history`}>History</Link><br/>
-                <Link to={`/players/${p.id}/edit`}>Edit</Link>
-              </td>
+          {rows.map(row => (
+            // thoguht about key={row.name} but im lowkey confused by what a key does
+            // like its not interactable but makes react itself keep track of things?
+            <tr>
+              <td className="borderTable centerText">{row.name}</td>
+              <td className="borderTable centerText">{row.chips}</td>
             </tr>
           ))}
         </tbody>

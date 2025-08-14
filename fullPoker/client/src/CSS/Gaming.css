@@ -20,3 +20,26 @@
   border: 1px solid #aaa; 
   border-collapse: collapse;
 }
+
+.ignoredHead {
+  background-color: #ddd;
+  padding: 0px;
+  width: 30px;
+}
+
+.ignoredText {
+  width: 30px;
+  max-width: 30px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: clip;
+  color: transparent;     /* hide text */
+  pointer-events: none;   /* disable clicks */
+  padding: 0;
+  background: #ccc;
+}
+
+.hidden {
+  /*color: transparent;*/
+  color: #00ffdd;
+}
