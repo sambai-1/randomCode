@@ -1,13 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import './CSS/Home.css';
 import './CSS/Gaming.css'
 
 export default function Home(){
   const [players, setPlayers] = useState([]);
-  const [buyIn, setBuyIn] = useState("");
-  const [smallBlind, setSmallBlind] = useState("");
-  const [bigBlind, setBigBlind] = useState("");
+  const [buyIn, setBuyIn] = useState(0);
+  const [smallBlind, setSmallBlind] = useState(0);
+  const [bigBlind, setBigBlind] = useState(0);
+  // const [firstLoad, setFirstLoad] = useState(false);
+  const firstLoad = useRef(true);
   const navigate = useNavigate();
 
   const [players2ID, setP2ID] = useState({});
@@ -43,31 +45,40 @@ export default function Home(){
         method: "GET",
       });
       const data = await res.json();
+      console.log("data", data)
       if (data) {
         setP2ID(data["players2ID"]);
-        const tmp = players2ID;
-        // console.log("players2ID", players2ID)
         setBuyIn(data["buyIn"]);
         setBigBlind(data["bigBlind"]);
         setSmallBlind(data["smallBlind"]);
-        setPlayers(Object.keys(tmp));
-        setTotalPlayers(players.length);
+
       }
     };
 
     fetchGame();
   }, []);
 
+  useEffect(() => {
+    const tmp = Object.keys(players2ID);
+    setPlayers(tmp);
+    setTotalPlayers(tmp.length); 
+  }, [players2ID]);
 
   useEffect(() => {
+    if (!firstLoad.current) return;
     if (totalPlayers == 0) return;
-  
+    firstLoad.current = false;
+    
     setRows(players.map(name => ({ "name": name, "chips": buyIn, "preFlop": 0, "flop": 0, "turn": 0, "river": 0, "message": "" })));
 
-    for (let name of players) {
-      playerBuy(name);
-    }
-  }, [players, buyIn, playerBuy]);
+    const initialBuy = async() => {
+      for (const name of players) {
+        await playerBuy(name, buyIn);
+      }
+    };
+    
+    initialBuy();
+  }, [players, buyIn]);
 
   const goBack = async event => {
     event.preventDefault();
