@@ -17,6 +17,9 @@ export default function Home(){
   const [SB, setSB] = useState(0);
   const [BB, setBB] = useState(1);
   const [rows, setRows] = useState([]);
+  const actions = ["Check", "Call", "Raise", "Fold", "All In"]
+  const rounds = ["preFlop", "flop", "turn", "river"]
+  const [roundI, setRoundI] = useState(0);
 
 
   const playerBuy = async (name, amount = buyIn) => {
@@ -69,7 +72,12 @@ export default function Home(){
     if (totalPlayers == 0) return;
     firstLoad.current = false;
     
-    setRows(players.map(name => ({ "name": name, "chips": buyIn, "preFlop": 0, "flop": 0, "turn": 0, "river": 0, "message": "" })));
+    // actions : ["Check", "Call", "Raise", "Fold", "All In"]
+
+    setRows(players.map(name => ({ "name": name, 
+      "chips": buyIn, "preFlop": 0, "flop": 0, 
+      "turn": 0, "river": 0, "actions": [1, 2, 3, 4], "message": "" 
+    })));
 
     const initialBuy = async() => {
       for (const name of players) {
@@ -85,13 +93,26 @@ export default function Home(){
     navigate(`/`);
   };
 
+  const setBet = (i, amount) => {
+    setRows(prevRows => {
+      return prevRows.map((row, index) => {
+        if (index != i) return row;
+        const label = rounds[roundI]
+        return { ...row, label: amount};
+      })
+    })
+  } 
+
+  const handleAction = (i, action) => {
+    return;
+  };
+
 // also have to miplemieent a buy back function to get back to buyIn, update chips
 
 // for saving, create database, col 1 (main) date time, and col 2 is json of moves
 
 
-  const rounds = ["preFlop", "flop", "turn", "river"]
-  const [roundI, setRoundI] = useState(0);
+
   const nextRound = () => {
     if (roundI < 3) {
       setRoundI(prevI => (prevI + 1) % rounds.length)
@@ -124,17 +145,52 @@ export default function Home(){
             <th className={`borderTable ${isCurrentRound("flop") ? "chips" : "ignoredHead"}`}>Flop</th>
             <th className={`borderTable ${isCurrentRound("turn") ? "chips" : "ignoredHead"}`}>Turn</th>
             <th className={`borderTable ${isCurrentRound("river") ? "chips" : "ignoredHead"}`}>River</th>
+            <th className="actions borderTable">Actions</th>
             <th className="hidden">Hidden</th>
           </tr>
         </thead>
 
         <tbody>
-          {rows.map(row => (
+          {rows.map((row, i) => (
             // thoguht about key={row.name} but im lowkey confused by what a key does
             // like its not interactable but makes react itself keep track of things?
             <tr>
               <td className="borderTable centerText">{row.name}</td>
               <td className="borderTable centerText">{row.chips}</td>
+              {() => {
+                if (isCurrentRound("preFlop")) {
+                  return (
+                    <input
+                      type="number"
+                      placeholder="bet..."
+                      value={row.preFlop}
+                      min="0"
+                      step="1"
+                      onKeyDown={e => {
+                        const blocked = ['e', 'E', '-', '+'];
+                        if (blocked.includes(e.key)) e.preventDefault();
+                      }}
+                      onChange={event => setBet(i, event.target.value)}
+                    />
+                  )
+                } else {
+                  return <td className="borderTable centerText ignoredText">{row.preFlop}</td>
+                }
+              }}
+                
+                  
+              <td className={`borderTable centerText ${isCurrentRound("preFlop") ? "" : "ignoredText"}`}>
+              </td>
+              <td className={`borderTable centerText ${isCurrentRound("flop") ? "" : "ignoredText"}`}>{row.flop}</td>
+              <td className={`borderTable centerText ${isCurrentRound("turn") ? "" : "ignoredText"}`}>{row.turn}</td>
+              <td className={`borderTable centerText ${isCurrentRound("river") ? "" : "ignoredText"}`}>{row.river}</td>
+              <td className="borderTable centerText">
+                {row.actions.map(action => {
+                  const label = actions[action];
+                  return <button onClick={() => handleAction(i, label)}>{label}</button>
+                })}
+              </td>
+
             </tr>
           ))}
         </tbody>

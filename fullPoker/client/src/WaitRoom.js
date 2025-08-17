@@ -178,11 +178,12 @@ export default function WaitRoom(){
             </td>
             <td>
               <img
-                src={row.locked ? "../public/locked_in.png" : "../public/lock_in.png"}
+                src={row.locked ? "/locked_in.png" : "/lock_in.png"}
                 alt={row.locked ? "locked" : "unlocked"}
                 width={48}
                 height={24}
                 style={{ cursor: "pointer" }}
+                className="lockin"
                 onClick={() => toggleLock(i)} // toggle lock
               />
             </td>
