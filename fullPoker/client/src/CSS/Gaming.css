@@ -43,3 +43,10 @@
   /*color: transparent;*/
   color: #00ffdd;
 }
+
+.messagePots {
+  font-size: 1rem;
+  font-weight: normal;
+  padding: 0 20px;
+  margin: 0px;
+}

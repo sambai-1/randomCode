@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import './CSS/Home.css';
 import './CSS/Gaming.css'
 
+
 export default function Home(){
   const [players, setPlayers] = useState([]);
   const [buyIn, setBuyIn] = useState(0);
@@ -14,12 +15,20 @@ export default function Home(){
 
   const [players2ID, setP2ID] = useState({});
   const [totalPlayers, setTotalPlayers] = useState(0);
+//double check the difference between a useState and useRef
+
   const [SB, setSB] = useState(0);
   const [BB, setBB] = useState(1);
+  const [hasAction, setHasAction] = useState(0);
   const [rows, setRows] = useState([]);
   const actions = ["Check", "Call", "Raise", "Fold", "All In"]
   const rounds = ["preFlop", "flop", "turn", "river"]
   const [roundI, setRoundI] = useState(0);
+  const [pot, setPot] = useState(0);
+  const [sidePot, setSidePot] = useState([1, 2, 3, 4]);
+
+  
+  const inputRefs = useRef([]); 
 
 
   const playerBuy = async (name, amount = buyIn) => {
@@ -40,6 +49,48 @@ export default function Home(){
     } catch (err) {
       console.error("error occored: ", err);
     }
+  }
+
+    setRows(players.map(name => ({ "name": name, "position": "",  
+      "hasAction": false, "stillPlaying": true, "chips": buyIn, "preFlop": 0, "flop": 0, 
+      "turn": 0, "river": 0, "actions": [1, 2, 3, 4], "message": "" 
+    })));
+
+  const clearRows = (winner) => {
+    setRows(prevRows => {
+      return prevRows.map((row, index) => {
+        let empty = { ...row, "position": "", "hasAction": false, 
+          "stillPlaying": true, "preFlop": 0, "flop": 0,
+          "turn": 0, "river": 0, "actions": [1, 2, 3, 4], "message": ""
+        }
+        if (row.chips < bigBlind) {
+          if (index == winner)
+            return empty
+          return { ...empty, "stilPlaying": false, "message": "not enough chips"};
+        }
+      });
+    });
+  }
+
+  const resetGame = (winner) => {
+    setHasAction((BB + 1) % totalPlayers)
+    clearRows(winner);
+    setRows(prevRows => {
+      return prevRows.map((row, index) => {
+        let tmp = row;
+        if (index == winner) {
+          tmp = { ...tmp, "chips": row.chips + pot};
+          setPot(0);
+        }
+        if (index == SB) tmp = { ...tmp, "position": "SB", "preFlop": smallBlind, "chips": row.chips - smallBlind}
+        if (index == BB) tmp = { ...tmp, "position": "BB", "preFlop": bigBlind, "chips": row.chips - bigBlind}
+        if (index == hasAction) tmp = { ...tmp, "hasAction": true};
+
+        return tmp
+      });
+    });
+    setSB((SB + 1) % totalPlayers)
+    setBB((BB + 1) % totalPlayers)
   }
 
   useEffect(() => {
@@ -74,8 +125,8 @@ export default function Home(){
     
     // actions : ["Check", "Call", "Raise", "Fold", "All In"]
 
-    setRows(players.map(name => ({ "name": name, 
-      "chips": buyIn, "preFlop": 0, "flop": 0, 
+    setRows(players.map(name => ({ "name": name, "position": "",  
+      "hasAction": false, "stillPlaying": true, "chips": buyIn, "preFlop": 0, "flop": 0, 
       "turn": 0, "river": 0, "actions": [1, 2, 3, 4], "message": "" 
     })));
 
@@ -86,6 +137,9 @@ export default function Home(){
     };
     
     initialBuy();
+
+    resetGame(0);
+
   }, [players, buyIn]);
 
   const goBack = async event => {
@@ -97,9 +151,16 @@ export default function Home(){
     setRows(prevRows => {
       return prevRows.map((row, index) => {
         if (index != i) return row;
-        const label = rounds[roundI]
-        return { ...row, label: amount};
-      })
+        // return { ...row, "${rounds[roundI]}": amount};
+        // whichRound = rounds[roundI]
+        // return { ...row, whichRound: amount};
+        // i dont understand why it chooses to use the variable name
+        // bro who uses square brackets?
+        if (row.chips < amount) {
+          return row;
+        }
+        return { ...row, [rounds[roundI]]: amount};
+      })  
     })
   } 
 
@@ -117,7 +178,11 @@ export default function Home(){
     if (roundI < 3) {
       setRoundI(prevI => (prevI + 1) % rounds.length)
     }
+    console.log(rows)
   }
+
+  // some sort of new round option when next round is at end
+  // rather than navigate to original page, it just sets rows and roundI to defaults
   const isCurrentRound = (roundName) => {
     return roundName == rounds[roundI]
   }
@@ -125,7 +190,13 @@ export default function Home(){
   return (
     <div className="home">
       <h1 className="Title">Players</h1>
-      <button onClick={nextRound}>Next round</button>
+      <div className="row">
+        <h1 className="messagePots">Current Pot: {pot}</h1>
+        {sidePot.map((sideP, i) => (
+          <h2 className="messagePots">SidePot {i + 1}: {sideP}</h2>
+        ))}
+        <button onClick={nextRound}>Next round</button>
+      </div>
       <table className="borderTable">
         {/* <colgroup>
           <col className="name" />
@@ -157,13 +228,16 @@ export default function Home(){
             <tr>
               <td className="borderTable centerText">{row.name}</td>
               <td className="borderTable centerText">{row.chips}</td>
-              {() => {
-                if (isCurrentRound("preFlop")) {
-                  return (
+
+              
+              {rounds.map((round) => (
+                <td className="borderTable centerText">
+                {
+                  isCurrentRound(round) ? (
                     <input
                       type="number"
                       placeholder="bet..."
-                      value={row.preFlop}
+                      value={row[round]}
                       min="0"
                       step="1"
                       onKeyDown={e => {
@@ -172,18 +246,12 @@ export default function Home(){
                       }}
                       onChange={event => setBet(i, event.target.value)}
                     />
+                  ) : (
+                    <span className="ignoredText"></span>
                   )
-                } else {
-                  return <td className="borderTable centerText ignoredText">{row.preFlop}</td>
                 }
-              }}
-                
-                  
-              <td className={`borderTable centerText ${isCurrentRound("preFlop") ? "" : "ignoredText"}`}>
-              </td>
-              <td className={`borderTable centerText ${isCurrentRound("flop") ? "" : "ignoredText"}`}>{row.flop}</td>
-              <td className={`borderTable centerText ${isCurrentRound("turn") ? "" : "ignoredText"}`}>{row.turn}</td>
-              <td className={`borderTable centerText ${isCurrentRound("river") ? "" : "ignoredText"}`}>{row.river}</td>
+                </td>
+              ))}
               <td className="borderTable centerText">
                 {row.actions.map(action => {
                   const label = actions[action];
