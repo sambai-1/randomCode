@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { resetGameUtil } from "./gaming.utils";
 import './CSS/Home.css';
 import './CSS/Gaming.css'
 
@@ -17,15 +18,15 @@ export default function Home(){
   const [totalPlayers, setTotalPlayers] = useState(0);
 //double check the difference between a useState and useRef
 
-  const [SB, setSB] = useState(0);
-  const [BB, setBB] = useState(1);
+  const [SB, setSB] = useState(-1);
+  const [BB, setBB] = useState(0);
   const [hasAction, setHasAction] = useState(0);
   const [rows, setRows] = useState([]);
   const actions = ["Check", "Call", "Raise", "Fold", "All In"]
   const rounds = ["preFlop", "flop", "turn", "river"]
   const [roundI, setRoundI] = useState(0);
   const [pot, setPot] = useState(0);
-  const [sidePot, setSidePot] = useState([1, 2, 3, 4]);
+  const [sidePot, setSidePot] = useState([-1]);
 
   
   const inputRefs = useRef([]); 
@@ -51,46 +52,20 @@ export default function Home(){
     }
   }
 
-    setRows(players.map(name => ({ "name": name, "position": "",  
-      "hasAction": false, "stillPlaying": true, "chips": buyIn, "preFlop": 0, "flop": 0, 
-      "turn": 0, "river": 0, "actions": [1, 2, 3, 4], "message": "" 
-    })));
-
-  const clearRows = (winner) => {
-    setRows(prevRows => {
-      return prevRows.map((row, index) => {
-        let empty = { ...row, "position": "", "hasAction": false, 
-          "stillPlaying": true, "preFlop": 0, "flop": 0,
-          "turn": 0, "river": 0, "actions": [1, 2, 3, 4], "message": ""
-        }
-        if (row.chips < bigBlind) {
-          if (index == winner)
-            return empty
-          return { ...empty, "stilPlaying": false, "message": "not enough chips"};
-        }
-      });
-    });
-  }
-
   const resetGame = (winner) => {
-    setHasAction((BB + 1) % totalPlayers)
-    clearRows(winner);
-    setRows(prevRows => {
-      return prevRows.map((row, index) => {
-        let tmp = row;
-        if (index == winner) {
-          tmp = { ...tmp, "chips": row.chips + pot};
-          setPot(0);
-        }
-        if (index == SB) tmp = { ...tmp, "position": "SB", "preFlop": smallBlind, "chips": row.chips - smallBlind}
-        if (index == BB) tmp = { ...tmp, "position": "BB", "preFlop": bigBlind, "chips": row.chips - bigBlind}
-        if (index == hasAction) tmp = { ...tmp, "hasAction": true};
+    setRows((prevRows) => {
+      const result = resetGameUtil(prevRows, {winner, pot, SB, BB, bigBlind, smallBlind});
 
-        return tmp
-      });
+      setPot(result.pot);
+      setSB(result.SB);
+      setBB(result.BB);
+      setHasAction(result.action);
+      return result.rows;
     });
-    setSB((SB + 1) % totalPlayers)
-    setBB((BB + 1) % totalPlayers)
+  };
+
+  const incrementAction = () => {
+    
   }
 
   useEffect(() => {
@@ -125,10 +100,21 @@ export default function Home(){
     
     // actions : ["Check", "Call", "Raise", "Fold", "All In"]
 
-    setRows(players.map(name => ({ "name": name, "position": "",  
-      "hasAction": false, "stillPlaying": true, "chips": buyIn, "preFlop": 0, "flop": 0, 
-      "turn": 0, "river": 0, "actions": [1, 2, 3, 4], "message": "" 
-    })));
+    setRows(
+      players.map((name) => ({
+        "name": name,
+        "position": "",
+        "stillPlaying": true,
+        "hasAction": false,
+        "chips": Number(buyIn),
+        "preFlop": 0,
+        "flop": 0,
+        "turn": 0,
+        "river": 0,
+        "actions": [1, 2, 3, 4],
+        "message": "",
+      }))
+    );
 
     const initialBuy = async() => {
       for (const name of players) {
@@ -264,7 +250,12 @@ export default function Home(){
         </tbody>
 
       </table>
-
+      <br></br>
+      <div className="row">
+        <h1 className="messagePots">Buy In: {buyIn}</h1>
+        <h1 className="messagePots">Small Blind: {smallBlind}</h1>
+        <h1 className="messagePots">Big Blind: {bigBlind}</h1>
+      </div>
       {
       //change to button that submits, but only when round is finished
       }
