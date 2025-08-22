@@ -13,7 +13,10 @@
 
 .centerText {
   text-align: center;
-  padding: 5px;
+}
+
+.rightText {
+  text-align: right;
 }
 
 .borderTable {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { resetGameUtil } from "./gaming.utils";
+import { nextEligible, resetGameUtil } from "./gaming.utils";
 import './CSS/Home.css';
 import './CSS/Gaming.css'
 
@@ -27,7 +27,8 @@ export default function Home(){
   const [roundI, setRoundI] = useState(0);
   const [pot, setPot] = useState(0);
   const [sidePot, setSidePot] = useState([-1]);
-
+  const [minBet, setMinBet] = useState(0);
+  const [prevRaise, setPrevRaise] = useState(0);
   
   const inputRefs = useRef([]); 
 
@@ -59,13 +60,39 @@ export default function Home(){
       setPot(result.pot);
       setSB(result.SB);
       setBB(result.BB);
-      setHasAction(result.action);
+      setHasAction(result.hasAction);
       return result.rows;
+
     });
   };
 
+  const resetAction = () => {
+    const nextStart = nextEligible(rows, SB)
+    console.log("Ressetting action, next player to start", nextStart);
+    setHasAction(nextStart);
+    setRows(prevRows => {
+      return prevRows.map((row, i) => {
+        if (i === nextStart) return { ...row, toMove: true, hasAction: true}
+        else return { ...row, toMove: true, hasAction: false}
+      })
+    })
+
+  }
+
   const incrementAction = () => {
-    
+    const nextHasAction = nextEligible(rows, (hasAction + 1) % totalPlayers);
+    if (rows[nextHasAction].toMove) {
+      setRows((prevRows) => {
+        return prevRows.map((row, i) => {
+          if (i === nextHasAction) return { ...row, hasAction: true};
+          return { ...row, hasAction: false};
+        })
+      });
+      setHasAction(nextHasAction);
+    } else {
+      resetAction();
+      nextRound();
+    }
   }
 
   useEffect(() => {
@@ -106,7 +133,9 @@ export default function Home(){
         "position": "",
         "stillPlaying": true,
         "hasAction": false,
+        "toMove": true,
         "chips": Number(buyIn),
+        "currentBet": 0,
         "preFlop": 0,
         "flop": 0,
         "turn": 0,
@@ -123,17 +152,28 @@ export default function Home(){
     };
     
     initialBuy();
-
     resetGame(0);
+    setMinBet(bigBlind)
+    setPrevRaise(bigBlind)
 
   }, [players, buyIn]);
+
+  useEffect(() => {
+    setRows(prevRows => {
+      return prevRows.map((row, i) => {
+        if (row.currentBet === minBet) return { ...row, actions: [0, 2, 3, 4]}
+        if (row.chips + row.currentBet < minBet) return { ...row, actions: [3, 4]}
+        return { ...row, actions: [1, 2, 3, 4]}
+      })
+    })
+  }, [minBet, hasAction]);
 
   const goBack = async event => {
     event.preventDefault();
     navigate(`/`);
   };
 
-  const setBet = (i, amount) => {
+  const updateBet = (i, amount) => {
     setRows(prevRows => {
       return prevRows.map((row, index) => {
         if (index != i) return row;
@@ -150,7 +190,75 @@ export default function Home(){
     })
   } 
 
+  const setBet = (i, amount) => {
+    setRows(prevRows => {
+      return prevRows.map((row, index) => {
+        if (index != i) return row;
+        const prev = row
+        return { ...prev,  
+          chips: prev.chips + prev.currentBet - amount, 
+          currentBet: amount, 
+          [rounds[roundI]]: 0};
+      })  
+    })
+  }
+
+  const setMessage = (i, message) => {
+    setRows(prevRows => {
+      return prevRows.map((row, index) => {
+        if (index != i) return row;
+        return { ...row, "message": message}
+      })
+    })
+  }
+
+  const resetMoveButI = (i) => {
+    for (let j = 0; j < totalPlayers; j++) {
+      if (i !== j) rows[j].toMove = true;
+    }
+  }
+
   const handleAction = (i, action) => {
+    console.log(rows)
+    if (!rows[i].hasAction) {
+      setMessage(i, "not your turn yet");
+      return;
+    }
+    if (action === "Check") {
+      rows[i].toMove = false;
+      incrementAction();
+    }
+    if (action === "Call") {
+      if (rows[i].chips + rows[i].currentBet < minBet) setMessage(i, "not enough chips");
+      else {
+        rows[i].toMove = false;
+        setPot(pot + minBet - rows[i].currentBet);
+        setBet(i, minBet);
+        incrementAction();
+      }
+    }
+    if (action === "Raise") {
+      const addition = Number(rows[i][rounds[roundI]])
+      /* bro why did I need to use Number() here???
+      console.log(addition + 1)
+      console.log(rows[i].currentBet + 1)
+      console.log(prevRaise + minBet)
+      console.log(rows[i].currentBet + addition)
+      console.log(prevRaise + minBet)
+      console.log((rows[i].currentBet + addition) < (prevRaise + minBet))
+      */
+      if ((rows[i].currentBet + addition) < (prevRaise + minBet)) setMessage(i, "smaller than Min Raise")
+      else {
+        rows[i].toMove = false;
+        resetMoveButI(i);
+        setBet(i, rows[i].currentBet + addition)
+        setPrevRaise(rows[i].currentBet + addition - minBet)
+        setMinBet(rows[i].currentBet + addition)
+        setPot(pot + addition)
+        incrementAction();
+      }
+    }
+
     return;
   };
 
@@ -177,6 +285,8 @@ export default function Home(){
     <div className="home">
       <h1 className="Title">Players</h1>
       <div className="row">
+        <h1 className="messagePots">Minimum Bet: {minBet}</h1>
+        <h1 className="messagePots">Minimum Raise: {minBet + prevRaise}</h1>
         <h1 className="messagePots">Current Pot: {pot}</h1>
         {sidePot.map((sideP, i) => (
           <h2 className="messagePots">SidePot {i + 1}: {sideP}</h2>
@@ -198,6 +308,7 @@ export default function Home(){
           <tr>
             <th className="name borderTable">Name</th>
             <th className="chips borderTable">Chips</th>
+            <th className="chips borderTable">Bet</th>
             <th className={`borderTable ${isCurrentRound("preFlop") ? "chips" : "ignoredHead"}`}>PreFlop</th>
             <th className={`borderTable ${isCurrentRound("flop") ? "chips" : "ignoredHead"}`}>Flop</th>
             <th className={`borderTable ${isCurrentRound("turn") ? "chips" : "ignoredHead"}`}>Turn</th>
@@ -212,10 +323,26 @@ export default function Home(){
             // thoguht about key={row.name} but im lowkey confused by what a key does
             // like its not interactable but makes react itself keep track of things?
             <tr>
-              <td className="borderTable centerText">{row.name}</td>
+              <td className="borderTable">
+                <span className="centerText">{row.name}</span>
+                <span className="rightText">{row.position}</span>
+                {
+                  row.hasAction ? (
+                    <h1>your turn</h1>
+                  ) : (
+                    <h1>not turn</h1>
+                  )
+                }
+                {
+                  row.toMove ? (
+                    <h1>to Move</h1>
+                  ) : (
+                    <h1>no Move</h1>
+                  )
+                }
+              </td>
               <td className="borderTable centerText">{row.chips}</td>
-
-              
+              <td className="borderTable centerText">{row.currentBet}</td>
               {rounds.map((round) => (
                 <td className="borderTable centerText">
                 {
@@ -230,7 +357,7 @@ export default function Home(){
                         const blocked = ['e', 'E', '-', '+'];
                         if (blocked.includes(e.key)) e.preventDefault();
                       }}
-                      onChange={event => setBet(i, event.target.value)}
+                      onChange={event => updateBet(i, event.target.value)}
                     />
                   ) : (
                     <span className="ignoredText"></span>
@@ -244,7 +371,7 @@ export default function Home(){
                   return <button onClick={() => handleAction(i, label)}>{label}</button>
                 })}
               </td>
-
+              <td className="borderTable centerText">{row.message}</td>
             </tr>
           ))}
         </tbody>

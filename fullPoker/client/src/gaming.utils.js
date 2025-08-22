@@ -22,6 +22,8 @@ export function resetGameUtil(prevRows, {winner, pot, SB, BB, bigBlind, smallBli
       position: "",
       stillPlaying: true,
       hasAction: false,
+      toMove: true,
+      currentBet: 0,
       preFlop: 0,
       flop: 0,
       turn: 0,
@@ -44,15 +46,15 @@ export function resetGameUtil(prevRows, {winner, pot, SB, BB, bigBlind, smallBli
 
   const withBlinds = activePlayers.map((row, i) => {
     if (i === newSB) {
-      return { ...row, position: "SB", preFlop: smallBlind, chips: row.chips - smallBlind };
+      return { ...row, position: "SB", chips: row.chips - smallBlind, currentBet: smallBlind };
     }
     if (i === newBB) {
-      return { ...row, position: "BB", preFlop: bigBlind, chips: row.chips - bigBlind };
+      return { ...row, position: "BB", chips: row.chips - bigBlind, currentBet: bigBlind };
     }
     return row;
   });
 
-  const nextHasAction = nextEligible(activePlayers, (BB + 1) % n);
+  const nextHasAction = nextEligible(activePlayers, (newBB + 1) % n);
   const withAction = withBlinds.map((row, i) => {
     if (i === nextHasAction) {
       return { ...row, hasAction: true};
