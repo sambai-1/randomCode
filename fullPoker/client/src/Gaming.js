@@ -218,6 +218,37 @@ export default function Home(){
     }
   }
 
+  const foldPlayer = (i) => {
+    setRows(prevRows => {
+      return prevRows.map((row, index) => {
+        if (index === i) {
+          return { ...row, stillPlaying: false}
+        }
+        return row
+      })
+    })
+  }
+
+  const checkWin = () => {
+    // right now I have a thing with folding early where I have it set to > 2
+    // the reason is although i fold then check for Win, fold is async
+    // so this function actually runs before fold, resulting in where the win condition
+    // should happen when there are exactly two players left
+
+    // 2 players -> check win -> then fold the player
+    if (rows.filter(row => row.stillPlaying).length > 2) return;
+    tryWin(1);
+    return;
+  }
+
+  const tryWin = (early) => {
+    if (early) {
+      console.log("early")
+    } else {
+      console.log("regular")
+    }
+  }
+
   const handleAction = (i, action) => {
     console.log(rows)
     if (!rows[i].hasAction) {
@@ -258,6 +289,11 @@ export default function Home(){
         incrementAction();
       }
     }
+    if (action === "Fold") {
+      foldPlayer(i);
+      checkWin();
+      incrementAction();
+    }
 
     return;
   };
@@ -270,9 +306,22 @@ export default function Home(){
 
   const nextRound = () => {
     if (roundI < 3) {
-      setRoundI(prevI => (prevI + 1) % rounds.length)
+      setRows(prevRows => {
+        return prevRows.map((row, i) => {
+          return { ...row, [rounds[roundI]]: row.currentBet, "currentBet": 0 }
+        })
+      })
+      //setRoundI(prevI => (prevI + 1) % rounds.length)
+      setRoundI(prevI => (prevI + 1))
+      setMinBet(0)
+      setPrevRaise(bigBlind)
+
+      console.log(roundI)
     }
-    console.log(rows)
+    else {
+      console.log("win")
+      tryWin(0);
+    }
   }
 
   // some sort of new round option when next round is at end
@@ -281,17 +330,32 @@ export default function Home(){
     return roundName == rounds[roundI]
   }
 
+  const setTest = () => {
+    setRows(prevRows => {
+      return prevRows.map((row, i) => {
+        if (i === 0) {
+          return { ...row, chips: 1500}
+        }
+        if (i === 1) {
+          return { ...row, chips: 100}
+        }
+        else return row
+      })  
+    })
+  }
+
   return (
     <div className="home">
       <h1 className="Title">Players</h1>
       <div className="row">
         <h1 className="messagePots">Minimum Bet: {minBet}</h1>
-        <h1 className="messagePots">Minimum Raise: {minBet + prevRaise}</h1>
+        <h1 className="messagePots">Previous Raise: {prevRaise}</h1>
         <h1 className="messagePots">Current Pot: {pot}</h1>
         {sidePot.map((sideP, i) => (
           <h2 className="messagePots">SidePot {i + 1}: {sideP}</h2>
         ))}
         <button onClick={nextRound}>Next round</button>
+        <button onClick={setTest}>set Poor</button>
       </div>
       <table className="borderTable">
         {/* <colgroup>
@@ -319,7 +383,7 @@ export default function Home(){
         </thead>
 
         <tbody>
-          {rows.map((row, i) => (
+          {rows.filter(row => row.stillPlaying).map((row, i) => (
             // thoguht about key={row.name} but im lowkey confused by what a key does
             // like its not interactable but makes react itself keep track of things?
             <tr>
@@ -343,7 +407,7 @@ export default function Home(){
               </td>
               <td className="borderTable centerText">{row.chips}</td>
               <td className="borderTable centerText">{row.currentBet}</td>
-              {rounds.map((round) => (
+              {rounds.map((round, currRound) => (
                 <td className="borderTable centerText">
                 {
                   isCurrentRound(round) ? (
@@ -360,7 +424,12 @@ export default function Home(){
                       onChange={event => updateBet(i, event.target.value)}
                     />
                   ) : (
-                    <span className="ignoredText"></span>
+                    (roundI > currRound) ? (
+                      
+                      <span className=""> {row[rounds[currRound]]} </span>
+                    ) : (
+                      <span className="ignoredText"></span>
+                    )
                   )
                 }
                 </td>
@@ -371,6 +440,22 @@ export default function Home(){
                   return <button onClick={() => handleAction(i, label)}>{label}</button>
                 })}
               </td>
+              <td className="borderTable centerText">{row.message}</td>
+            </tr>
+          ))}
+          {rows.filter(row => !row.stillPlaying).map((row, i) => (
+            <tr className="rowRed">
+              <td className="borderTable">
+                <span className="centerText">{row.name}</span>
+                <span className="rightText">{row.position}</span>
+              </td>
+              <td className="borderTable centerText">{row.chips}</td>
+              <td className="borderTable centerText">{row.currentBet}</td>
+              <td className="borderTable centerText">{row.preFlop}</td>
+              <td className="borderTable centerText">{row.flop}</td>
+              <td className="borderTable centerText">{row.turn}</td>
+              <td className="borderTable centerText">{row.river}</td>
+              <td className="borderTable centerText">N/A</td>
               <td className="borderTable centerText">{row.message}</td>
             </tr>
           ))}
