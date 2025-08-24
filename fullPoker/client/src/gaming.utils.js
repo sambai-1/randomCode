@@ -1,12 +1,19 @@
+export function totalBet (row) {
+  return Number(row.preFlop) + Number(row.flop) + Number(row.turn) + Number(row.river) + Number(row.currentBet)
+};
+
 const canPlay = (rows, i) => {
-  return rows[i].stillPlaying;
+  return (rows[i].stillPlaying && !rows[i].allIn);
 }
 
 export function nextEligible (rows, start) {
   const n = rows.length;
   for (let i = 0; i < n; i++) {
     const player = (i + start) % n;
-    if (canPlay(rows, player)) return player;
+    if (canPlay(rows, player)) {
+      return player;
+    }
+
   }
   return -1;
 };
@@ -21,6 +28,7 @@ export function resetGameUtil(prevRows, {winner, pot, SB, BB, bigBlind, smallBli
       ...row,
       position: "",
       stillPlaying: true,
+      allIn: false, 
       hasAction: false,
       toMove: true,
       currentBet: 0,

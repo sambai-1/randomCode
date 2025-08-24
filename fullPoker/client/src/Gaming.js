@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { nextEligible, resetGameUtil } from "./gaming.utils";
+import { nextEligible, resetGameUtil, totalBet } from "./gaming.utils";
 import './CSS/Home.css';
 import './CSS/Gaming.css'
 
@@ -26,10 +26,10 @@ export default function Home(){
   const rounds = ["preFlop", "flop", "turn", "river"]
   const [roundI, setRoundI] = useState(0);
   const [pot, setPot] = useState(0);
-  const [sidePot, setSidePot] = useState([-1]);
+  const [sidePot, setSidePot] = useState([]);
   const [minBet, setMinBet] = useState(0);
   const [prevRaise, setPrevRaise] = useState(0);
-  
+  let allIns = [];
   const inputRefs = useRef([]); 
 
 
@@ -79,15 +79,15 @@ export default function Home(){
 
   }
 
-  const incrementAction = () => {
-    const nextHasAction = nextEligible(rows, (hasAction + 1) % totalPlayers);
-    if (rows[nextHasAction].toMove) {
-      setRows((prevRows) => {
-        return prevRows.map((row, i) => {
+  const incrementAction = (r) => {
+    const nextHasAction = nextEligible(r, (hasAction + 1) % totalPlayers);
+    if (r[nextHasAction].toMove) {
+      setRows(() => {
+        return r.map((row, i) => {
           if (i === nextHasAction) return { ...row, hasAction: true};
           return { ...row, hasAction: false};
         })
-      });
+      })
       setHasAction(nextHasAction);
     } else {
       resetAction();
@@ -132,6 +132,7 @@ export default function Home(){
         "name": name,
         "position": "",
         "stillPlaying": true,
+        "allIn": false, 
         "hasAction": false,
         "toMove": true,
         "chips": Number(buyIn),
@@ -161,12 +162,16 @@ export default function Home(){
   useEffect(() => {
     setRows(prevRows => {
       return prevRows.map((row, i) => {
-        if (row.currentBet === minBet) return { ...row, actions: [0, 2, 3, 4]}
-        if (row.chips + row.currentBet < minBet) return { ...row, actions: [3, 4]}
+        if (row.allIn || !row.stillPlaying) return { ...row, actions: []}
+        else if (row.currentBet === minBet) return { ...row, actions: [0, 2, 3, 4]}
+        else if (row.chips + row.currentBet < minBet) return { ...row, actions: [3, 4]}
         return { ...row, actions: [1, 2, 3, 4]}
       })
     })
   }, [minBet, hasAction]);
+
+
+
 
   const goBack = async event => {
     event.preventDefault();
@@ -190,17 +195,16 @@ export default function Home(){
     })
   } 
 
-  const setBet = (i, amount) => {
-    setRows(prevRows => {
-      return prevRows.map((row, index) => {
+  const changeRowBet = (r, i, amount) => {
+    return (
+      r.map((row, index) => {
         if (index != i) return row;
-        const prev = row
-        return { ...prev,  
-          chips: prev.chips + prev.currentBet - amount, 
+        return { ...row,  
+          chips: row.chips + row.currentBet - amount, 
           currentBet: amount, 
           [rounds[roundI]]: 0};
       })  
-    })
+    )
   }
 
   const setMessage = (i, message) => {
@@ -212,13 +216,14 @@ export default function Home(){
     })
   }
 
-  const resetMoveButI = (i) => {
-    for (let j = 0; j < totalPlayers; j++) {
-      if (i !== j) rows[j].toMove = true;
-    }
+  const resetMoveButI = (r, i) => {
+    return r.map((row, j) => {
+      if (i === j) return row
+      return { ...row, toMove: true}
+    })
   }
 
-  const foldPlayer = (i) => {
+  const foldPlayer = (r, i) => {
     setRows(prevRows => {
       return prevRows.map((row, index) => {
         if (index === i) {
@@ -229,14 +234,25 @@ export default function Home(){
     })
   }
 
-  const checkWin = () => {
+  const allInPlayer = (r, i, amount) => {
+    const tmp = r.map((row, index) => {
+      if (index === i) {
+        return { ...row, allIn: true}
+      }
+      return row
+    })
+
+    return tmp
+  }
+
+  const checkWin = (r) => {
     // right now I have a thing with folding early where I have it set to > 2
     // the reason is although i fold then check for Win, fold is async
     // so this function actually runs before fold, resulting in where the win condition
     // should happen when there are exactly two players left
 
     // 2 players -> check win -> then fold the player
-    if (rows.filter(row => row.stillPlaying).length > 2) return;
+    if (r.filter(row => row.stillPlaying).length > 2) return;
     tryWin(1);
     return;
   }
@@ -249,6 +265,13 @@ export default function Home(){
     }
   }
 
+  const calculatePots = (r) => {
+    let totalMoneyIn = 0;
+    r.map(row => totalMoneyIn += Number(totalBet(row)))
+    console.log(totalMoneyIn)
+    setPot(0)
+  }
+
   const handleAction = (i, action) => {
     console.log(rows)
     if (!rows[i].hasAction) {
@@ -257,19 +280,20 @@ export default function Home(){
     }
     if (action === "Check") {
       rows[i].toMove = false;
-      incrementAction();
+      incrementAction(rows);
     }
     if (action === "Call") {
       if (rows[i].chips + rows[i].currentBet < minBet) setMessage(i, "not enough chips");
       else {
         rows[i].toMove = false;
-        setPot(pot + minBet - rows[i].currentBet);
-        setBet(i, minBet);
-        incrementAction();
+        const r = changeRowBet(rows, i, minBet);
+        calculatePots(r);
+        setRows(r)
+        incrementAction(r);
       }
     }
     if (action === "Raise") {
-      const addition = Number(rows[i][rounds[roundI]])
+      const newBet = rows[i].currentBet + Number(rows[i][rounds[roundI]])
       /* bro why did I need to use Number() here???
       console.log(addition + 1)
       console.log(rows[i].currentBet + 1)
@@ -278,21 +302,41 @@ export default function Home(){
       console.log(prevRaise + minBet)
       console.log((rows[i].currentBet + addition) < (prevRaise + minBet))
       */
-      if ((rows[i].currentBet + addition) < (prevRaise + minBet)) setMessage(i, "smaller than Min Raise")
+      if ((newBet) < (prevRaise + minBet)) setMessage(i, "smaller than Min Raise")
       else {
         rows[i].toMove = false;
-        resetMoveButI(i);
-        setBet(i, rows[i].currentBet + addition)
-        setPrevRaise(rows[i].currentBet + addition - minBet)
-        setMinBet(rows[i].currentBet + addition)
-        setPot(pot + addition)
-        incrementAction();
+        let r = resetMoveButI(rows, i);
+        r = changeRowBet(r, i, newBet)
+        setPrevRaise(newBet - minBet)
+        setMinBet(newBet)
+        calculatePots(r)
+        setRows(r)
+        incrementAction(r);
       }
     }
     if (action === "Fold") {
-      foldPlayer(i);
-      checkWin();
-      incrementAction();
+      const r = foldPlayer(r, i);
+      setRows(r)
+      checkWin(r);
+      incrementAction(r);
+    }
+    if (action === "All In") {
+      const allInAmount = totalBet(rows[i]) + rows[i].chips
+      let r = allInPlayer(rows, i, allInAmount);
+      rows[i].toMove = false;
+      if (allInAmount > minBet) {
+        r = resetMoveButI(r, i);
+        r = changeRowBet(r, i, allInAmount)
+        setPrevRaise(allInAmount - minBet)
+        setMinBet(allInAmount)
+
+      } else if (allInAmount === minBet) {
+        r = changeRowBet(r, i, minBet);
+      }
+
+      calculatePots(r)
+      checkWin(r);
+      incrementAction(r);
     }
 
     return;
@@ -372,7 +416,6 @@ export default function Home(){
           <tr>
             <th className="name borderTable">Name</th>
             <th className="chips borderTable">Chips</th>
-            <th className="chips borderTable">Bet</th>
             <th className={`borderTable ${isCurrentRound("preFlop") ? "chips" : "ignoredHead"}`}>PreFlop</th>
             <th className={`borderTable ${isCurrentRound("flop") ? "chips" : "ignoredHead"}`}>Flop</th>
             <th className={`borderTable ${isCurrentRound("turn") ? "chips" : "ignoredHead"}`}>Turn</th>
@@ -404,13 +447,37 @@ export default function Home(){
                     <h1>no Move</h1>
                   )
                 }
+                {
+                  row.allIn ? (
+                    <h1>all In</h1>
+                  ) : (
+                    <h1 className="ignoredText"> test </h1>
+                  )
+                }
               </td>
-              <td className="borderTable centerText">{row.chips}</td>
-              <td className="borderTable centerText">{row.currentBet}</td>
+              <td className="borderTable centerText">
+                {row.chips - row[rounds[roundI]]}
+                <br></br>
+                combined bets: {totalBet(row)}
+              </td>
               {rounds.map((round, currRound) => (
                 <td className="borderTable centerText">
                 {
-                  isCurrentRound(round) ? (
+                  (isCurrentRound(round) && !row.allIn) ? ( 
+                    <h1 className="message">bet: {row.currentBet}</h1>
+                  ) : (
+                    <span className="ignoredText"></span>
+                  )
+                }
+                {
+                  (isCurrentRound(round) && !row.allIn) ? ( 
+                    <br></br>
+                  ) : (
+                    <span className="ignoredText"></span>
+                  )
+                }
+                {
+                  (isCurrentRound(round) && !row.allIn) ? ( 
                     <input
                       type="number"
                       placeholder="bet..."
