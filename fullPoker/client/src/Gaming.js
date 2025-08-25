@@ -29,7 +29,7 @@ export default function Home(){
   const [sidePot, setSidePot] = useState([]);
   const [minBet, setMinBet] = useState(0);
   const [prevRaise, setPrevRaise] = useState(0);
-  let allIns = [];
+  const allIns = useRef([]);
   const inputRefs = useRef([]); 
 
 
@@ -224,13 +224,11 @@ export default function Home(){
   }
 
   const foldPlayer = (r, i) => {
-    setRows(prevRows => {
-      return prevRows.map((row, index) => {
-        if (index === i) {
-          return { ...row, stillPlaying: false}
-        }
-        return row
-      })
+    return r.map((row, index) => {
+      if (index === i) {
+        return { ...row, stillPlaying: false}
+      }
+      return row
     })
   }
 
@@ -241,6 +239,13 @@ export default function Home(){
       }
       return row
     })
+
+    /*
+    console.log(sidePot)
+    setSidePot(sidePot + [1]) */
+
+    console.log(allIns)
+    allIns = allIns + [1]
 
     return tmp
   }
@@ -315,7 +320,8 @@ export default function Home(){
       }
     }
     if (action === "Fold") {
-      const r = foldPlayer(r, i);
+      const r = foldPlayer(rows, i);
+      console.log("test", r)
       setRows(r)
       checkWin(r);
       incrementAction(r);
@@ -502,6 +508,11 @@ export default function Home(){
                 </td>
               ))}
               <td className="borderTable centerText">
+                {(row.allIn) ? (
+                  <h1 className="message">All In</h1>
+                ) : (
+                  <h1 className="message"></h1>
+                )}
                 {row.actions.map(action => {
                   const label = actions[action];
                   return <button onClick={() => handleAction(i, label)}>{label}</button>
@@ -517,12 +528,11 @@ export default function Home(){
                 <span className="rightText">{row.position}</span>
               </td>
               <td className="borderTable centerText">{row.chips}</td>
-              <td className="borderTable centerText">{row.currentBet}</td>
               <td className="borderTable centerText">{row.preFlop}</td>
               <td className="borderTable centerText">{row.flop}</td>
               <td className="borderTable centerText">{row.turn}</td>
               <td className="borderTable centerText">{row.river}</td>
-              <td className="borderTable centerText">N/A</td>
+              <td className="borderTable centerText">Folded</td>
               <td className="borderTable centerText">{row.message}</td>
             </tr>
           ))}
