@@ -3,7 +3,7 @@ export function totalBet (row) {
 };
 
 const canPlay = (rows, i) => {
-  return (rows[i].stillPlaying && !rows[i].allIn);
+  return (rows[i].stillPlaying && rows[i].toMove);
 }
 
 export function nextEligible (rows, start) {
