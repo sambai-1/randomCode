@@ -81,6 +81,9 @@ export default function Home(){
 
   const incrementAction = (r) => {
     const nextHasAction = nextEligible(r, (hasAction + 1) % totalPlayers);
+
+    console.log(r.map(row => [row.stillPlaying, row.allIn ,row.hasAction]))
+    console.log("next Player", nextHasAction)
     if (r[nextHasAction].toMove) {
       setRows(() => {
         return r.map((row, i) => {
@@ -93,6 +96,7 @@ export default function Home(){
       resetAction();
       nextRound();
     }
+    console.log("new," , r.map(row => [row.stillPlaying, row.allIn ,row.hasAction]))
   }
 
   useEffect(() => {
@@ -239,11 +243,13 @@ export default function Home(){
       }
       return row
     })
+    
     tmp = changeRowBet(tmp, i, amount)
 
     const newAllIns = [...allIns, totalBet(tmp[i])]
-
-    return tmp, newAllIns
+    console.log("1", tmp)
+    console.log("after allIn, new list", newAllIns)
+    return [tmp, newAllIns]
   }
 
   const checkWin = (r) => {
@@ -267,26 +273,27 @@ export default function Home(){
   }
 
   const calculatePots = (r, sides = allIns) => {
+    console.log(r, sides)
     let totalMoneyIn = 0;
     r.map(row => totalMoneyIn += Number(totalBet(row)))
     let copy = r.filter(row => row.stillPlaying).map(row => Number(totalBet(row)))
-    console.log(totalMoneyIn)
+    console.log(copy, "total pot", totalMoneyIn)
+    setPot(totalMoneyIn)
 
+    sides.sort((a, b) => a - b);
     let sidePots = []
     for (let i = 0; i < sides.length; i++) {
       let currentCount = 0;
       copy.map((chipsLeft, j) => {
         if (chipsLeft > 0) {
           const chipsToRemove = Math.min(chipsLeft, sides[i])
-          totalMoneyIn -= chipsToRemove
-          currentCount += currentCount
+          currentCount += chipsToRemove
           copy[j] -= chipsToRemove
         }
       })
       if (currentCount > 0) {sidePots = [...sidePots, currentCount]}
     }
-    console.log(totalMoneyIn)
-    setPot(totalMoneyIn)
+    setSidePot(sidePots)
   }
 
   const handleAction = (i, action) => {
@@ -339,8 +346,10 @@ export default function Home(){
     }
     if (action === "All In") {
       const allInAmount = totalBet(rows[i]) + rows[i].chips
-      let r, sides = allInPlayer(rows, i, allInAmount);
-      rows[i].toMove = false;
+
+      // note, I can't do const a, b = func(c). i have to do const [a, b] = func(c)
+      let [r, sides] = allInPlayer(rows, i, allInAmount);
+      r[i].toMove = false;
       if (allInAmount > minBet) {
         r = resetMoveButI(r, i);
         r = changeRowBet(r, i, allInAmount)
