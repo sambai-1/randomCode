@@ -282,16 +282,20 @@ export default function Home(){
     setPot(totalMoneyIn)
 
     sides.sort((a, b) => a - b);
-    let sidePots = []
+    let sidePots = [];
+    let prevSide = 0;
+    // do calculations to check if this is right, use 20, 50, 100 chips
     for (let i = 0; i < sides.length; i++) {
+      let layer = sides[i] - prevSide;
       let currentCount = 0;
       copy.map((chipsLeft, j) => {
         if (chipsLeft > 0) {
-          const chipsToRemove = Math.min(chipsLeft, sides[i])
+          const chipsToRemove = Math.min(chipsLeft, layer)
           currentCount += chipsToRemove
           copy[j] -= chipsToRemove
         }
       })
+      prevSide = layer;
       if (currentCount > 0) {sidePots = [...sidePots, currentCount]}
     }
     setSidePot(sidePots)
