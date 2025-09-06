@@ -6,11 +6,14 @@ const canPlay = (rows, i) => {
   return (rows[i].stillPlaying && rows[i].toMove);
 }
 
-export function nextEligible (rows, start) {
+export function nextEligible (rows, start, reset=false) {
   const n = rows.length;
   for (let i = 0; i < n; i++) {
     const player = (i + start) % n;
-    if (canPlay(rows, player)) {
+    if (reset && rows[player].stillPlaying) {
+      return player
+    }
+    if (!reset && canPlay(rows, player)) {
       return player;
     }
 
