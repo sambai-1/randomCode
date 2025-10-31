@@ -66,42 +66,62 @@ export default function Home(){
     });
   };
 
-  const resetAction = () => {
-    const nextStart = nextEligible(rows, SB)
+  const resetAction = (r) => {
+    const nextStart = nextEligible(r, SB, true)
     console.log("Ressetting action, next player to start", nextStart);
     setHasAction(nextStart);
-    setRows(prevRows => {
-      return prevRows.map((row, i) => {
-        if (row.allIn) return { ...row, toMove: false, hasAction: false}
-        else if (i === nextStart) return { ...row, toMove: true, hasAction: true}
-        else return { ...row, toMove: true, hasAction: false}
-      })
+    return r.map((row, i) => {
+      if (row.allIn) return { ...row, toMove: false, hasAction: false}
+      else if (i === nextStart) return { ...row, toMove: true, hasAction: true}
+      else return { ...row, toMove: true, hasAction: false}
     })
+  }
 
+  const toggleMove = (r, i) => {
+    return r.map((row, j) => {
+      if (j === i) {
+        return { ...row, toMove: !row.toMove};
+      }
+      return row;
+    })
   }
 
   const incrementAction = (r) => {
-    console.log(r)
-    const nextHasAction = nextEligible(r, (hasAction + 1) % totalPlayers);
-    console.log(nextHasAction)
+    console.log(hasAction)
+    let nextHasAction = nextEligible(r, (hasAction + 1) % totalPlayers);
+    console.log("next has action", nextHasAction)
     if (nextHasAction === -1) {
-      setRows(r);
-      nextRound();
+      r = nextRound(r);
+      return r;
 
     } else if (r[nextHasAction].toMove) {
-      setRows(() => {
-        return r.map((row, i) => {
-          if (i === nextHasAction) return { ...row, hasAction: true};
-          return { ...row, hasAction: false};
-        })
-      })
       setHasAction(nextHasAction);
+      return r.map((row, i) => {
+        if (i === nextHasAction) return { ...row, hasAction: true }
+        return { ...row, hasAction: false }
+      })
     } else {
       resetAction();
-      nextRound();
+      r = nextRound();
+      return r;
     }
+  }
 
-    console.log("new," , r.map(row => [row.stillPlaying, row.allIn ,row.hasAction]))
+  const nextRound = (r) => {
+    if (roundI < 3) {
+      r = resetAction(r)
+      setRoundI(prevI => (prevI + 1))
+      setMinBet(0)
+      setPrevRaise(bigBlind)
+      return r.map((row, i) => {
+        return { ...row, [rounds[roundI]]: row.currentBet, "currentBet": 0}
+      })
+      //setRoundI(prevI => (prevI + 1) % rounds.length)
+    }
+    else {
+      console.log("win")
+      tryWin(0);
+    }
   }
 
   useEffect(() => {
@@ -282,42 +302,46 @@ export default function Home(){
     setPot(totalMoneyIn)
 
     sides.sort((a, b) => a - b);
-    let sidePots = []
+    let sidePots = [];
+    let prevSide = 0;
+    // do calculations to check if this is right, use 20, 50, 100 chips
     for (let i = 0; i < sides.length; i++) {
+      let layer = sides[i] - prevSide;
       let currentCount = 0;
       copy.map((chipsLeft, j) => {
         if (chipsLeft > 0) {
-          const chipsToRemove = Math.min(chipsLeft, sides[i])
+          const chipsToRemove = Math.min(chipsLeft, layer)
           currentCount += chipsToRemove
           copy[j] -= chipsToRemove
         }
       })
+      prevSide = layer;
       if (currentCount > 0) {sidePots = [...sidePots, currentCount]}
     }
     setSidePot(sidePots)
   }
 
   const handleAction = (i, action) => {
-    if (!rows[i].hasAction) {
+    let r = rows;
+    if (!r[i].hasAction) {
       setMessage(i, "not your turn yet");
       return;
     }
     if (action === "Check") {
-      rows[i].toMove = false;
-      incrementAction(rows);
+      r = toggleMove(r, i)
+      r = incrementAction(r);
     }
     if (action === "Call") {
-      if (rows[i].chips + rows[i].currentBet < minBet) setMessage(i, "not enough chips");
+      if (r[i].chips + r[i].currentBet < minBet) setMessage(i, "not enough chips");
       else {
-        rows[i].toMove = false;
-        const r = changeRowBet(rows, i, minBet);
+        r = toggleMove(r, i)
+        r = changeRowBet(r, i, minBet);
         calculatePots(r);
-        setRows(r)
-        incrementAction(r);
+        r = incrementAction(r);
       }
     }
     if (action === "Raise") {
-      const newBet = rows[i].currentBet + Number(rows[i][rounds[roundI]])
+      const newBet = r[i].currentBet + Number(r[i][rounds[roundI]])
       /* bro why did I need to use Number() here???
       console.log(addition + 1)
       console.log(rows[i].currentBet + 1)
@@ -328,27 +352,24 @@ export default function Home(){
       */
       if ((newBet) < (prevRaise + minBet)) setMessage(i, "smaller than Min Raise")
       else {
-        rows[i].toMove = false;
-        let r = resetMoveButI(rows, i);
+        r = resetMoveButI(rows, i);
         r = changeRowBet(r, i, newBet)
         setPrevRaise(newBet - minBet)
         setMinBet(newBet)
         calculatePots(r)
-        setRows(r)
-        incrementAction(r);
+        r = incrementAction(r);
       }
     }
     if (action === "Fold") {
-      const r = foldPlayer(rows, i);
-      setRows(r)
+      r = foldPlayer(r, i);
       checkWin(r);
       incrementAction(r);
     }
     if (action === "All In") {
-      const allInAmount = totalBet(rows[i]) + rows[i].chips
+      const allInAmount = totalBet(r[i]) + r[i].chips
 
       // note, I can't do const a, b = func(c). i have to do const [a, b] = func(c)
-      let [r, currentIns] = allInPlayer(rows, i, allInAmount);
+      let [r, currentIns] = allInPlayer(r, i, allInAmount);
       r[i].toMove = false;
       if (allInAmount > (minBet)) {
         r = resetMoveButI(r, i);
@@ -367,6 +388,7 @@ export default function Home(){
       incrementAction(r);
     }
 
+    setRows(r);
     return;
   };
 
@@ -376,25 +398,7 @@ export default function Home(){
 
 
 
-  const nextRound = () => {
-    if (roundI < 3) {
-      setRows(prevRows => {
-        return prevRows.map((row, i) => {
-          return { ...row, [rounds[roundI]]: row.currentBet, "currentBet": 0 }
-        })
-      })
-      //setRoundI(prevI => (prevI + 1) % rounds.length)
-      setRoundI(prevI => (prevI + 1))
-      setMinBet(0)
-      setPrevRaise(bigBlind)
-
-      console.log(roundI)
-    }
-    else {
-      console.log("win")
-      tryWin(0);
-    }
-  }
+  
 
   // some sort of new round option when next round is at end
   // rather than navigate to original page, it just sets rows and roundI to defaults
